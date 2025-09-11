@@ -38,7 +38,7 @@ score_left = 0
 score_right = 0
 
 
-waiting_restart = False
+waiting_restart = True
 deadzone = 12
 
 while True:
@@ -104,8 +104,8 @@ while True:
         ball_speed = 360.0
 
     if waiting_restart:
-        screen.draw_text("Pressione SPACE para continuar",
-                         screen.width/2 - 250, screen.height/2 + 100,
+        screen.draw_text("SPACE",
+                         screen.width/2 - 55, screen.height/2 + 100,
                          size=32, color=(255,255,255))
         if keyboard.key_pressed("SPACE"):
             waiting_restart = False

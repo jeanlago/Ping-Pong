@@ -6,13 +6,14 @@ os.environ["SDL_AUDIODRIVER"] = "dummy" #meu pc buga e nao abre o arquivo pq ta 
 from PPlay.window import *
 from PPlay.sprite import *
 from PPlay.keyboard import Keyboard
+import pygame
 
 screen = Window(1280, 720)
 screen.set_title("Ping Pong")
 keyboard = Keyboard()
 
 ball = Sprite("assets/images/ball.png", 1)
-ball.x = (screen.width  / 2) - (ball.width  / 2)
+ball.x = (screen.width / 2) - (ball.width / 2) - 4.6
 ball.y = (screen.height / 2) - (ball.height / 2)
 
 ball_speed = 360.0
@@ -37,9 +38,12 @@ pad_speed = 400.0
 score_left = 0
 score_right = 0
 
-
 waiting_restart = True
 deadzone = 12
+game_over = False
+max_points = 3
+winner_side = ""
+sep = 2
 
 while True:
     dt = screen.delta_time()
@@ -67,48 +71,47 @@ while True:
         pad_right.y += (pad_speed if diff > 0 else -pad_speed) * dt
     pad_right.y = max(0, min(screen.height - pad_right.height, pad_right.y))
 
-    if ball.collided(pad_left):
+    if ball.collided(pad_left) and dir_x < 0:
         dir_x = 1
-        ball.x = pad_left.x + pad_left.width
+        ball.x = pad_left.x + pad_left.width + sep
         ball_speed = min(ball_speed * paddle_boost, speed_max)
 
-    if ball.collided(pad_right):
+    if ball.collided(pad_right) and dir_x > 0:
         dir_x = -1
-        ball.x = pad_right.x - ball.width
+        ball.x = pad_right.x - ball.width - sep
         ball_speed = min(ball_speed * paddle_boost, speed_max)
 
-    if ball.y <= 0:
-        ball.y = 0
+    if ball.y <= 0 and dir_y < 0:
+        ball.y = 0 + sep
         dir_y *= -1
         ball_speed = min(ball_speed * wall_boost_h, speed_max)
 
-    if ball.y + ball.height >= screen.height:
-        ball.y = screen.height - ball.height
+    if (ball.y + ball.height) >= screen.height and dir_y > 0:
+        ball.y = screen.height - ball.height - sep
         dir_y *= -1
         ball_speed = min(ball_speed * wall_boost_h, speed_max)
 
     if ball.x <= 0:
         score_right += 1
         waiting_restart = True
-        ball.x = (screen.width / 2) - (ball.width / 2)
+        ball.x = (screen.width / 2) - (ball.width / 2) - 4.6
         ball.y = (screen.height / 2) - (ball.height / 2)
         dir_x, dir_y = 1, 1
         ball_speed = 360.0
+        if score_right >= max_points:
+            game_over = True
+            winner_side = "Direito"
 
-    if ball.x + ball.width >= screen.width:
+    if (ball.x + ball.width) >= screen.width:
         score_left += 1
         waiting_restart = True
-        ball.x = (screen.width / 2) - (ball.width / 2)
+        ball.x = (screen.width / 2) - (ball.width / 2) - 4.6
         ball.y = (screen.height / 2) - (ball.height / 2)
         dir_x, dir_y = -1, -1
         ball_speed = 360.0
-
-    if waiting_restart:
-        screen.draw_text("SPACE",
-                         screen.width/2 - 55, screen.height/2 + 100,
-                         size=32, color=(255,255,255))
-        if keyboard.key_pressed("SPACE"):
-            waiting_restart = False
+        if score_left >= max_points:
+            game_over = True
+            winner_side = "Esquerdo"
 
     step = 32
     xmid = screen.width // 2
@@ -127,5 +130,32 @@ while True:
     screen.draw_text(f"{score_right}", sx+140, sy, size=72, color=(0, 0, 0))
     screen.draw_text(f"{score_left}", sx-2, sy-2, size=72, color=(255, 255, 255))
     screen.draw_text(f"{score_right}", sx+138, sy-2, size=72, color=(255, 255, 255))
+
+    if waiting_restart:
+        if game_over:
+            surf = pygame.display.get_surface()
+            rw = int(screen.width * 0.6)
+            rh = int(screen.height * 0.6)
+            rx = (screen.width - rw) // 2
+            ry = (screen.height - rh) // 2
+            overlay = pygame.Surface((rw, rh), pygame.SRCALPHA)
+            pygame.draw.rect(overlay, (0, 0, 0, 170), overlay.get_rect(), border_radius=28)
+            pygame.draw.rect(overlay, (255, 255, 255, 40), overlay.get_rect(), width=2, border_radius=28)
+            surf.blit(overlay, (rx, ry))
+            screen.draw_text("GAME OVER",
+                             screen.width/2 - 179, ry + 26,
+                             size=56, color=(255,255,255))
+            screen.draw_text(f"Lado {winner_side} venceu!",
+                             screen.width/2 - 165, ry + 100,
+                             size=32, color=(255,255,255))
+        screen.draw_text("SPACE",
+                         screen.width/2 - 55, screen.height/2 + 100,
+                         size=32, color=(255,255,255))
+        if keyboard.key_pressed("SPACE"):
+            if game_over:
+                score_left = 0
+                score_right = 0
+                game_over = False
+            waiting_restart = False
 
     screen.update()
